@@ -145,7 +145,6 @@ const Dashboard = () => {
         },
       });
       if (response.ok) {
-        // Refresh users list or show success message
         setUsers(users.filter(user => user._id !== userId));
         fetchPendingUsers();
         alert('User suspended successfully');
@@ -176,7 +175,6 @@ const Dashboard = () => {
         },
       });
       if (response.ok) {
-        // Remove the deleted user from the users array immediately
         setUsers(users.filter(user => user._id !== userId));
         alert('User deleted successfully');
       } else {
