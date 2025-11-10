@@ -1,9 +1,8 @@
 const cron = require("node-cron");
 const sendExpiryReminders = require("../utils/sendExpiryReminders");
 
-cron.schedule("41 23 * * *", async () => {
+cron.schedule("0 6 * * *", async () => {
   await sendExpiryReminders();
 });
-
 
 
