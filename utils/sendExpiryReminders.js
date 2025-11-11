@@ -36,15 +36,15 @@ const sendExpiryReminders = async () => {
       if (upcomingExpiries.length > 0) {
         const emails = await EmailList.find({ addedBy: userId });
 
-        for (const entry of emails) {
-          await sendEmail(
-            entry.email,
-            "Vehicle Document Expiry Alert",
-            `Dear User,\n\nThe following documents for vehicle "${vehicle.vehicleNumber}" are expiring soon:\n\n${upcomingExpiries.join(
-              "\n"
-            )}\n\nPlease renew them to avoid penalties.\n\n- KG Vehicles`
-          );
-        }
+        // for (const entry of emails) {
+        //   await sendEmail(
+        //     entry.email,
+        //     "Vehicle Document Expiry Alert",
+        //     `Dear User,\n\nThe following documents for vehicle "${vehicle.vehicleNumber}" are expiring soon:\n\n${upcomingExpiries.join(
+        //       "\n"
+        //     )}\n\nPlease renew them to avoid penalties.\n\n- KG Vehicles`
+        //   );
+        // }
         const phones = await PhoneList.find({ addedBy: userId });
         console.log("Phones ->",phones);
         for (const phone of phones) {
