@@ -125,16 +125,25 @@ const VehicleForm = ({ vehicle, mode, onClose, onSave }) => {
     }));
   };
 
-  const handleDateChange = (date, field) => {
-    if (isView) return;
-    setFormData((prev) => ({
-      ...prev,
-      [field]: date ? date.toISOString().split('T')[0] : '',
-    }));
-  };
+const handleDateChange = (date, field) => {
+  if (isView) return;
+  setFormData((prev) => ({
+    ...prev,
+    [field]: date ? date.toISOString().split('T')[0] : null, // <- send null instead of ''
+  }));
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+
+    const tax = formData.taxExpiry?.trim();
+    if (tax && tax.toLowerCase() !== 'lifetime' && isNaN(Date.parse(tax))) {
+      alert("Tax Expiry must be a valid date, 'Lifetime', or empty");
+      return;
+    }
+
+
     setLoading(true);
     try {
       if (isAdd) {
@@ -186,15 +195,15 @@ const VehicleForm = ({ vehicle, mode, onClose, onSave }) => {
                   {isView
                     ? 'View Vehicle Details'
                     : isEdit
-                    ? 'Edit Vehicle'
-                    : 'Add New Vehicle'}
+                      ? 'Edit Vehicle'
+                      : 'Add New Vehicle'}
                 </h2>
                 <p className="text-gray-300 mt-1">
                   {isView
                     ? 'Vehicle information and documentation status'
                     : isEdit
-                    ? 'Update vehicle information and documents'
-                    : 'Register a new vehicle in the system'}
+                      ? 'Update vehicle information and documents'
+                      : 'Register a new vehicle in the system'}
                 </p>
               </div>
             </div>
@@ -232,9 +241,8 @@ const VehicleForm = ({ vehicle, mode, onClose, onSave }) => {
                         value={formData[field]}
                         onChange={handleChange}
                         disabled={isView}
-                        className={`w-full px-4 py-3 bg-slate-600/50 border border-slate-500/50 rounded-xl text-white ${
-                          isView ? 'cursor-not-allowed opacity-75' : 'hover:bg-slate-600/70'
-                        }`}
+                        className={`w-full px-4 py-3 bg-slate-600/50 border border-slate-500/50 rounded-xl text-white ${isView ? 'cursor-not-allowed opacity-75' : 'hover:bg-slate-600/70'
+                          }`}
                         placeholder={`Enter ${fieldLabels[field].toLowerCase()}`}
                       />
                     </div>
@@ -252,22 +260,36 @@ const VehicleForm = ({ vehicle, mode, onClose, onSave }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {dateFields.map((field) => {
                   const IconComponent = fieldIcons[field];
+                  const isTax = field === 'taxExpiry';
                   return (
                     <div key={field}>
                       <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
                         <IconComponent className="mr-2 text-blue-400 text-sm" />
                         {fieldLabels[field]}
                       </label>
-                      <DatePicker
-                        selected={formData[field] ? new Date(formData[field]) : null}
-                        onChange={(date) => handleDateChange(date, field)}
-                        dateFormat="yyyy-MM-dd"
-                        placeholderText="Select date"
-                        disabled={isView}
-                        className={`w-full px-4 py-3 bg-slate-600/50 border border-slate-500/50 rounded-xl text-white ${
-                          isView ? 'cursor-not-allowed opacity-75' : 'hover:bg-slate-600/70'
-                        }`}
-                      />
+                      {field === 'taxExpiry' ? (
+                        <input
+                          type="text"
+                          name="taxExpiry"
+                          value={formData.taxExpiry}
+                          onChange={handleChange}
+                          disabled={isView}
+                          placeholder="Enter date (YYYY-MM-DD), 'Lifetime' or leave empty"
+                          className={`w-full px-4 py-3 bg-slate-600/50 border border-slate-500/50 rounded-xl text-white ${isView ? 'cursor-not-allowed opacity-75' : 'hover:bg-slate-600/70'
+                            }`}
+                        />
+                      ) : (
+                        <DatePicker
+                          selected={formData[field] ? new Date(formData[field]) : null}
+                          onChange={(date) => handleDateChange(date, field)}
+                          dateFormat="yyyy-MM-dd"
+                          placeholderText="Select date"
+                          disabled={isView}
+                          className={`w-full px-4 py-3 bg-slate-600/50 border border-slate-500/50 rounded-xl text-white ${isView ? 'cursor-not-allowed opacity-75' : 'hover:bg-slate-600/70'
+                            }`}
+                        />
+                      )}
+
                     </div>
                   );
                 })}
@@ -293,9 +315,8 @@ const VehicleForm = ({ vehicle, mode, onClose, onSave }) => {
                     value={formData.documentStatus}
                     onChange={handleChange}
                     disabled={isView}
-                    className={`w-full px-4 py-3 bg-slate-600/50 border border-slate-500/50 rounded-xl text-white ${
-                      isView ? 'cursor-not-allowed opacity-75' : 'hover:bg-slate-600/70'
-                    }`}
+                    className={`w-full px-4 py-3 bg-slate-600/50 border border-slate-500/50 rounded-xl text-white ${isView ? 'cursor-not-allowed opacity-75' : 'hover:bg-slate-600/70'
+                      }`}
                     placeholder="'Active/Expired/Warning"
                   />
                 </div>

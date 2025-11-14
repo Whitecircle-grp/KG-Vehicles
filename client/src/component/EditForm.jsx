@@ -12,11 +12,11 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
     vehicleNumber: '',
     vehicleType: '',
     ownerName: '',
-    insuranceExpiry: '',
-    fitnessExpiry: '',
-    permitExpiry: '',
-    pollutionExpiry: '',
-    taxExpiry: '',
+    insuranceExpiry: null,
+    fitnessExpiry: null,
+    permitExpiry: null,
+    pollutionExpiry: null,
+    taxExpiry: null,
     documentStatus: '',
     createdBy: '',
     oldVehicle: false,
@@ -31,18 +31,7 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
     'taxExpiry',
   ];
 
-  const fields = [
-    'vehicleNumber',
-    'ownerName',
-    'vehicleType',
-    'insuranceExpiry',
-    'fitnessExpiry',
-    'permitExpiry',
-    'pollutionExpiry',
-    'taxExpiry',
-    'documentStatus',
-    'createdBy',
-  ];
+  const fields = ['vehicleNumber', 'ownerName', 'vehicleType'];
 
   const fieldIcons = {
     vehicleNumber: FaCar,
@@ -76,16 +65,18 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
         vehicleNumber: vehicle.vehicleNumber || '',
         vehicleType: vehicle.vehicleType || '',
         ownerName: vehicle.ownerName || '',
-        insuranceExpiry: vehicle.insuranceExpiry || '',
-        fitnessExpiry: vehicle.fitnessExpiry || '',
-        permitExpiry: vehicle.permitExpiry || '',
-        pollutionExpiry: vehicle.pollutionExpiry || '',
-        taxExpiry: vehicle.taxExpiry || '',
+        insuranceExpiry: vehicle.insuranceExpiry ? vehicle.insuranceExpiry : null,
+        fitnessExpiry: vehicle.fitnessExpiry ? vehicle.fitnessExpiry : null,
+        permitExpiry: vehicle.permitExpiry ? vehicle.permitExpiry : null,
+        pollutionExpiry: vehicle.pollutionExpiry ? vehicle.pollutionExpiry : null,
+        taxExpiry: vehicle.taxExpiry ? vehicle.taxExpiry : null,
         documentStatus: vehicle.documentStatus || '',
         createdBy: vehicle.createdBy || '',
         oldVehicle: vehicle.oldVehicle || false,
         _id: vehicle._id,
       });
+
+      console.log(vehicle);
     }
 
     if (inputRef.current) {
@@ -104,7 +95,7 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
   const handleDateChange = (date, field) => {
     setFormData((prev) => ({
       ...prev,
-      [field]: date ? date.toISOString().split('T')[0] : '',
+      [field]: date || null,
     }));
   };
 
@@ -114,22 +105,40 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
 
     try {
       const { _id, ...dataToSend } = formData;
-      if (typeof dataToSend.createdBy === 'object' && dataToSend.createdBy._id) {
-        dataToSend.createdBy = dataToSend.createdBy._id;
+
+      const preparedData = { ...dataToSend };
+      dateFields.forEach((field) => {
+        const dateValue = formData[field];
+        if (dateValue && !isNaN(new Date(dateValue).getTime())) {
+          preparedData[field] = new Date(dateValue).toISOString().split('T')[0];
+        } else {
+          preparedData[field] = ''; // or null depending on backend
+        }
+      });
+
+
+      if (typeof preparedData.createdBy === 'object' && preparedData.createdBy._id) {
+        preparedData.createdBy = preparedData.createdBy._id;
       }
-      // console.log("Submitting data to update:", dataToSend);
+
+      // Make API call
       const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/api/vehicles/${_id}`,
-        dataToSend,
+        preparedData,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         }
       );
-      alert('Vehicle updated successfully!');
-      onSave(response.data);
-      onClose();
+
+      if (response.status === 200) {
+        alert('Vehicle updated successfully! ✅');
+        onSave(response.data);
+        onClose();
+      } else {
+        alert('Failed to update vehicle 🥲');
+      }
     } catch (error) {
       console.error('Error updating vehicle:', error);
       alert('Failed to update vehicle 🥲');
@@ -172,7 +181,7 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
                 Basic Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {fields.slice(0, 3).map((field, idx) => {
+                {fields.map((field, idx) => {
                   const IconComponent = fieldIcons[field];
                   return (
                     <div key={field}>
@@ -220,7 +229,11 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
                       <div className="relative">
                         <DatePicker
                           id={field}
-                          selected={formData[field] ? new Date(formData[field]) : null}
+                          selected={
+                            formData[field] && !isNaN(new Date(formData[field]).getTime())
+                              ? new Date(formData[field])
+                              : null
+                          }
                           onChange={(date) => handleDateChange(date, field)}
                           dateFormat="yyyy-MM-dd"
                           placeholderText="Select date"
@@ -274,8 +287,11 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
                     type="text"
                     id="createdBy"
                     name="createdBy"
-                    value={formData.createdBy.name || formData.createdBy.email || formData.createdBy}
-                    onChange={handleChange}
+                    value={
+                      formData.createdBy
+                        ? formData.createdBy.name || formData.createdBy.email || formData.createdBy
+                        : ''
+                    }
                     className="w-full px-4 py-3 bg-slate-600/30 border border-slate-500/30 rounded-xl text-gray-400 cursor-not-allowed opacity-75"
                     disabled
                   />

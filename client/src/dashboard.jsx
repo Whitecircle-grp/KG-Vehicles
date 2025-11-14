@@ -100,8 +100,8 @@ const Dashboard = () => {
     setPhones((prevPhones) => [...prevPhones, newPhone]);
   };
 
-  const handleAddEmail = (newEmail)=>{
-    setEmails((prevEmails)=>[...prevEmails, newEmail]);
+  const handleAddEmail = (newEmail) => {
+    setEmails((prevEmails) => [...prevEmails, newEmail]);
   }
 
   useEffect(() => {
@@ -442,7 +442,7 @@ const Dashboard = () => {
 
         {/* Modals */}
         {showEmailModal && (
-          <EmailModal onClose={() => setShowEmailModal(false)} onAddEmail = {handleAddEmail}/>
+          <EmailModal onClose={() => setShowEmailModal(false)} onAddEmail={handleAddEmail} />
         )}
 
         {showPhoneModal && (
@@ -701,12 +701,20 @@ const Dashboard = () => {
               }}
             />
           )}
-
+       
           {/* For Admin: Add/Edit mode; For User: View only */}
           {(mode === 'add' || mode === 'view') && (
             <div className="mt-8">
               <VehicleForm
-                vehicle={selectedVehicle}
+                vehicle={{
+                  ...selectedVehicle,
+                  registrationDate: selectedVehicle?.registrationDate || '',
+                  insuranceExpiry: selectedVehicle?.insuranceExpiry || '',
+                  fitnessExpiry: selectedVehicle?.fitnessExpiry || '',
+                  pollutionExpiry: selectedVehicle?.pollutionExpiry || '',
+                  taxExpiry:selectedVehicle?.taxExpiry || '',
+                  // add any other date fields here
+                }}
                 mode={mode}
                 onSave={handleSave}
                 onClose={handleCloseForm}
@@ -717,7 +725,15 @@ const Dashboard = () => {
 
           {mode === 'edit' && selectedVehicle && (
             <EditForm
-              vehicle={selectedVehicle}
+              vehicle={{
+                ...selectedVehicle,
+                registrationDate: selectedVehicle?.registrationDate || '',
+                insuranceExpiry: selectedVehicle?.insuranceExpiry || '',
+                fitnessExpiry: selectedVehicle?.fitnessExpiry || '',
+                pollutionExpiry: selectedVehicle?.pollutionExpiry || '',
+                taxExpiry:selectedVehicle?.taxExpiry || '',
+                // add any other date fields here
+              }}
               onClose={handleCloseForm}
               onSave={handleSave}
               readOnly={userRole !== "admin"}
