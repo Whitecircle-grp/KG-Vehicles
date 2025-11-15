@@ -85,16 +85,19 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
 
     const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: process.env.BREVO_SMTP_HOST,
+      port: 587,
+      secure: false,
       auth: {
-        user: process.env.EMAIL,
-        pass: process.env.EMAIL_PASSWORD
+        user: process.env.BREVO_SMTP_USER,
+        pass: process.env.BREVO_SMTP_PASS
       }
     });
 
     await transporter.sendMail({
-      from: `"AutoTrack Support" <${process.env.EMAIL}>`,
+      from: `"AutoTrack Support" <${process.env.SENDER_EMAIL}>`,
       to: email,
       subject: "AutoTrack - Password Reset Request",
       html: `
@@ -102,13 +105,9 @@ exports.forgotPassword = async (req, res) => {
         <div style="max-width:500px; margin:auto; background:white; border-radius:10px; padding:25px; border:1px solid #eee;">
             
             <h2 style="color:#4b18ef; text-align:center;">🔒 Password Reset Request</h2>
-            
             <p>Hello,</p>
-            <p>We received a request to reset your password for your <strong>AutoTrack</strong> account.</p>
-            
-            <p style="margin:20px 0;">
-            Click the button below to reset your password:
-            </p>
+            <p>We received a password reset request for your <strong>AutoTrack</strong> account.</p>
+            <p>Click the button below to reset your password:</p>
 
             <div style="text-align:center; margin:25px 0;">
             <a href="${resetLink}"
@@ -117,23 +116,24 @@ exports.forgotPassword = async (req, res) => {
             </a>
             </div>
 
-            <p>This link will remain valid for <strong>15 minutes</strong>. If it expires, you will need to request a new reset link.</p>
-
-            <p>If you did not make this request, you can safely ignore this email.</p>
+            <p>This link is valid for <strong>15 minutes</strong>.</p>
+            <p>If you did not request this, just ignore this email.</p>
 
             <hr style="margin:25px 0; border:none; border-top:1px solid #eee;">
             <p style="font-size:13px; color:#777; text-align:center;">
-            This is an automated message, please do not reply.
+            This is an automated message. Do not reply.
             </p>
         </div>
         </div>
-    `
+      `
     });
+
     res.json({ message: "Reset email sent" });
   } catch (err) {
     res.status(500).json({ message: "Error", error: err.message });
   }
 };
+
 
 
 //reset pass
