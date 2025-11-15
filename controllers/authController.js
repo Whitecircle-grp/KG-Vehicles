@@ -58,7 +58,7 @@ exports.loginUser = async (req, res) => {
     res.status(200).json({
       token,
       user: {
-        _id:user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -75,6 +75,7 @@ exports.loginUser = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
+    console.log("Forgot pass api called !!!");
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "Email not found" });
@@ -88,13 +89,16 @@ exports.forgotPassword = async (req, res) => {
 
     const transporter = nodemailer.createTransport({
       host: process.env.BREVO_SMTP_HOST,
-      port: 587,
-      secure: false,
+      port: 465,
+      secure: true, // TLS for port 465
       auth: {
         user: process.env.BREVO_SMTP_USER,
         pass: process.env.BREVO_SMTP_PASS
       }
     });
+
+
+    console.log("transponder response ==", transporter);
 
     await transporter.sendMail({
       from: `"AutoTrack Support" <${process.env.SENDER_EMAIL}>`,
@@ -127,7 +131,7 @@ exports.forgotPassword = async (req, res) => {
         </div>
       `
     });
-
+    console.log("Sent the mail successfully");
     res.json({ message: "Reset email sent" });
   } catch (err) {
     res.status(500).json({ message: "Error", error: err.message });
