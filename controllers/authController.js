@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs")
 const jwt = require("jsonwebtoken")
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+const brevo = require("@getbrevo/brevo");
 
 exports.registerUser = async (req, res) => {
   try {
@@ -75,7 +76,6 @@ exports.loginUser = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    console.log("Forgot pass api called !!!");
 
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "Email not found" });
@@ -87,53 +87,45 @@ exports.forgotPassword = async (req, res) => {
 
     const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.BREVO_SMTP_HOST,
-      port: 465,
-      secure: true, // TLS for port 465
-      auth: {
-        user: process.env.BREVO_SMTP_USER,
-        pass: process.env.BREVO_SMTP_PASS
-      }
-    });
+    // --- Brevo API client ---
+    const client = new brevo.TransactionalEmailsApi();
+    client.setApiKey(
+      brevo.TransactionalEmailsApiApiKeys.apiKey,
+      process.env.BREVO_API_KEY
+    );
 
-
-    console.log("transponder response ==", transporter);
-
-    await transporter.sendMail({
-      from: `"AutoTrack Support" <${process.env.SENDER_EMAIL}>`,
-      to: email,
+    const emailData = {
+      sender: {
+        name: "AutoTrack Support",
+        email: process.env.SENDER_EMAIL,
+      },
+      to: [{ email }],
       subject: "AutoTrack - Password Reset Request",
-      html: `
+      htmlContent: `
         <div style="font-family:Arial, sans-serif; background:#f7f7f7; padding:20px;">
         <div style="max-width:500px; margin:auto; background:white; border-radius:10px; padding:25px; border:1px solid #eee;">
             
             <h2 style="color:#4b18ef; text-align:center;">🔒 Password Reset Request</h2>
             <p>Hello,</p>
-            <p>We received a password reset request for your <strong>AutoTrack</strong> account.</p>
-            <p>Click the button below to reset your password:</p>
+            <p>We received a password reset request for your AutoTrack account.</p>
 
             <div style="text-align:center; margin:25px 0;">
-            <a href="${resetLink}"
-                style="background:#4b18ef; color:white; padding:12px 25px; text-decoration:none; border-radius:6px; display:inline-block;">
+            <a href="${resetLink}" style="background:#4b18ef; color:white; padding:12px 25px; text-decoration:none; border-radius:6px;">
                 Reset Password
             </a>
             </div>
 
-            <p>This link is valid for <strong>15 minutes</strong>.</p>
-            <p>If you did not request this, just ignore this email.</p>
+            <p>This link is valid for 15 minutes.</p>
+        </div>
+        </div>`
+    };
 
-            <hr style="margin:25px 0; border:none; border-top:1px solid #eee;">
-            <p style="font-size:13px; color:#777; text-align:center;">
-            This is an automated message. Do not reply.
-            </p>
-        </div>
-        </div>
-      `
-    });
-    console.log("Sent the mail successfully");
+    await client.sendTransacEmail(emailData);
+
     res.json({ message: "Reset email sent" });
+
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Error", error: err.message });
   }
 };
