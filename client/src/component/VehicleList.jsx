@@ -1,11 +1,119 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import { FaEye, FaEdit, FaTrash, FaPlus, FaExclamationTriangle, FaCalendarAlt, FaUser, FaCar } from 'react-icons/fa';
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+
+
 
 const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
-   const userRole = localStorage.getItem('role');
+  const userRole = localStorage.getItem('role');
   const [showModal, setShowModal] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState(null);
+
+  const getTodayForFileName = () => {
+    const now = new Date();
+
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = now.getFullYear();
+
+    return `${day}-${month}-${year}`;
+  };
+
+
+  const exportToPDF = () => {
+    const fileDate = getTodayForFileName();
+    const doc = new jsPDF("l", "mm", "a4");
+
+    doc.setFontSize(14);
+    doc.text("Vehicle List Report", 14, 15);
+
+    const tableColumn = [
+      "#",
+      "Vehicle No",
+      "Owner",
+      "Type",
+      "Insurance",
+      "Fitness",
+      "Permit",
+      "Pollution",
+      "Tax",
+      "Status",
+    ];
+
+    const tableRows = vehiclesDetails.map((v, index) => [
+      index + 1,
+      v.vehicleNumber,
+      v.ownerName,
+      v.vehicleType,
+      formatDate(v.insuranceExpiry),
+      formatDate(v.fitnessExpiry),
+      formatDate(v.permitExpiry),
+      formatDate(v.pollutionExpiry),
+      v.taxExpiry || "N/A",
+      v.documentStatus,
+    ]);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 20,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [22, 160, 133] },
+
+      didDrawPage: (data) => {
+        const pageHeight = doc.internal.pageSize.height;
+        doc.setFontSize(9);
+        doc.setTextColor(120);
+
+        doc.text(
+          `Downloaded on: ${fileDate}`,
+          data.settings.margin.left,
+          pageHeight - 10
+        );
+      },
+    });
+
+    doc.save(`vehicle_list_${fileDate}.pdf`);
+  };
+
+  const exportToExcel = () => {
+    const fileDate = getTodayForFileName();
+    const data = vehiclesDetails.map((v, index) => ({
+      "#": index + 1,
+      "Vehicle Number": v.vehicleNumber,
+      "Owner Name": v.ownerName,
+      "Vehicle Type": v.vehicleType,
+      "Insurance Expiry": formatDate(v.insuranceExpiry),
+      "Fitness Expiry": formatDate(v.fitnessExpiry),
+      "Permit Expiry": formatDate(v.permitExpiry),
+      "Pollution Expiry": formatDate(v.pollutionExpiry),
+      "Tax Expiry": v.taxExpiry || "N/A",
+      "Status": v.documentStatus,
+      "Created By": v.createdBy?.name || v.createdBy?.email,
+      "Created At": formatDate(v.createdAt),
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicles");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+
+    const file = new Blob([excelBuffer], {
+      type:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    saveAs(file, `vehicle_list_${fileDate}.xlsx`);
+  };
 
   const confirmDelete = (vehicle) => {
     setVehicleToDelete(vehicle);
@@ -22,11 +130,11 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
 
   const getExpiryStatus = (dateStr) => {
     if (!dateStr) return { color: 'text-gray-200', bgColor: 'bg-gray-600/80', status: 'N/A' };
-    
+
     const expiry = new Date(dateStr);
     const today = new Date();
     const diffInDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-    
+
     if (diffInDays < 0) {
       return { color: 'text-red-200', bgColor: 'bg-red-600/80', status: 'Expired' };
     } else if (diffInDays <= 7) {
@@ -58,18 +166,32 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
           </h2>
           <p className="text-gray-300 mt-1">Manage all vehicles and their documentation</p>
         </div>
-        
-         {userRole === 'admin' && (
-          <button
-            onClick={onAdd}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 
+        <div className="flex gap-3">
+          {userRole === 'admin' && (
+            <button
+              onClick={onAdd}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 
                        text-white font-semibold py-3 px-6 rounded-xl shadow-lg 
                        hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105 flex items-center"
+            >
+              <FaPlus className="mr-2" />
+              Add New Vehicle
+            </button>
+          )}
+          <button
+            onClick={exportToPDF}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold"
           >
-            <FaPlus className="mr-2" />
-            Add New Vehicle
+            Export PDF
           </button>
-        )}
+
+          <button
+            onClick={exportToExcel}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold"
+          >
+            Export Excel
+          </button>
+        </div>
       </div>
 
       {/* Vehicles Grid/Table */}
@@ -106,24 +228,24 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
                 {vehiclesDetails.map((v, index) => (
                   <tr key={v._id || index} className="hover:bg-slate-700/40 transition-colors duration-200">
                     <td className="px-6 py-4 text-gray-100 font-semibold">{index + 1}</td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="font-bold text-white text-base">{v.vehicleNumber}</div>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <FaUser className="text-blue-400 mr-2 text-sm" />
                         <span className="text-gray-100 font-medium">{v.ownerName}</span>
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <span className="bg-blue-600/80 text-white px-3 py-1 rounded-full text-xs font-semibold">
                         {v.vehicleType}
                       </span>
                     </td>
-                    
+
                     {/* Expiry Dates with Status Indicators */}
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -135,7 +257,7 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
                         </span>
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className={getExpiryStatus(v.fitnessExpiry).color + " font-semibold text-sm"}>
@@ -146,7 +268,7 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
                         </span>
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className={getExpiryStatus(v.permitExpiry).color + " font-semibold text-sm"}>
@@ -157,7 +279,7 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
                         </span>
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className={getExpiryStatus(v.pollutionExpiry).color + " font-semibold text-sm"}>
@@ -168,7 +290,7 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
                         </span>
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className={getExpiryStatus(v.taxExpiry).color + " font-semibold text-sm"}>
@@ -179,34 +301,34 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
                         </span>
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <span className="bg-green-600/80 text-white px-3 py-1 rounded-full text-xs font-semibold">
                         {v.documentStatus || 'Active'}
                       </span>
                     </td>
-                    
+
                     <td className="px-6 py-4 text-gray-100 font-medium">
                       {v.createdBy?.name || v.createdBy?.email || v.createdBy}
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="flex items-center text-gray-100 font-medium">
                         <FaCalendarAlt className="mr-2 text-blue-400 text-sm" />
                         {v.createdAt ? new Date(v.createdAt).toLocaleDateString('en-IN') : 'N/A'}
                       </div>
                     </td>
-                    
+
                     <td className="px-6 py-4">
                       <div className="flex justify-center gap-2">
-{/*                         <button 
+                        {/*                         <button 
                           onClick={() => onView(v)} 
                           className="bg-blue-600/80 hover:bg-blue-600 text-white p-2.5 rounded-lg transition-all duration-200 hover:scale-110 shadow-lg"
                           title="View Details"
                         >
                           <FaEye className="text-sm" />
                         </button> */}
-                       {/* ✏️ Edit button (acts as View for users) */}
+                        {/* ✏️ Edit button (acts as View for users) */}
                         <button
                           onClick={() => {
                             if (userRole === 'admin') onEdit(v);
@@ -255,7 +377,7 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
               </p>
               <p className="text-red-300 text-sm mt-2">This action cannot be undone.</p>
             </div>
-            
+
             <div className="flex gap-4">
               <button
                 onClick={() => setShowModal(false)}
