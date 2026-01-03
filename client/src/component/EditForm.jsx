@@ -69,7 +69,7 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
         fitnessExpiry: vehicle.fitnessExpiry ? vehicle.fitnessExpiry : null,
         permitExpiry: vehicle.permitExpiry ? vehicle.permitExpiry : null,
         pollutionExpiry: vehicle.pollutionExpiry ? vehicle.pollutionExpiry : null,
-        taxExpiry: vehicle.taxExpiry ? vehicle.taxExpiry : null,
+        taxExpiry: vehicle.taxExpiry || '',
         documentStatus: vehicle.documentStatus || '',
         createdBy: vehicle.createdBy || '',
         oldVehicle: vehicle.oldVehicle || false,
@@ -104,7 +104,7 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
     setLoading(true);
 
     try {
-      const { _id, ...dataToSend } = formData;
+      const { _id, taxExpiry, ...dataToSend } = formData;
 
       const preparedData = { ...dataToSend };
       dateFields.forEach((field) => {
@@ -120,6 +120,7 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
       if (typeof preparedData.createdBy === 'object' && preparedData.createdBy._id) {
         preparedData.createdBy = preparedData.createdBy._id;
       }
+      preparedData.taxExpiry = taxExpiry;
 
       // Make API call
       const response = await axios.put(
@@ -219,28 +220,31 @@ const EditForm = ({ vehicle, onClose, onSave }) => {
                   const IconComponent = fieldIcons[field];
                   return (
                     <div key={field}>
-                      <label
-                        htmlFor={field}
-                        className="block text-sm font-medium text-gray-300 mb-2 flex items-center"
-                      >
+                      <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
                         <IconComponent className="mr-2 text-blue-400 text-sm" />
                         {fieldLabels[field]}
                       </label>
-                      <div className="relative">
+                      {field === 'taxExpiry' ? (
+                        <input
+                          type="text"
+                          name="taxExpiry"
+                          value={formData.taxExpiry}
+                          onChange={handleChange}
+                          placeholder="Enter date (YYYY-MM-DD), 'Lifetime' or leave empty"
+                          className={`w-full px-4 py-3 bg-slate-600/50 border border-slate-500/50 rounded-xl text-white hover:bg-slate-600/70'
+                                                }`}
+                        />
+                      ) : (
                         <DatePicker
-                          id={field}
-                          selected={
-                            formData[field] && !isNaN(new Date(formData[field]).getTime())
-                              ? new Date(formData[field])
-                              : null
-                          }
+                          selected={formData[field] ? new Date(formData[field]) : null}
                           onChange={(date) => handleDateChange(date, field)}
                           dateFormat="yyyy-MM-dd"
                           placeholderText="Select date"
-                          className="w-full px-4 py-3 bg-slate-600/50 border border-slate-500/50 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 hover:bg-slate-600/70"
+                          className={`w-full px-4 py-3 bg-slate-600/50 border border-slate-500/50 rounded-xl text-white  hover:bg-slate-600/70'
+                                                }`}
                         />
-                        <FaCalendarAlt className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                      </div>
+                      )}
+
                     </div>
                   );
                 })}
