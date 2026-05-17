@@ -13,6 +13,8 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
   const userRole = localStorage.getItem('role');
   const [showModal, setShowModal] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
 
   const getTodayForFileName = () => {
     const now = new Date();
@@ -128,6 +130,16 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
     setVehicleToDelete(null);
   };
 
+  const openDetails = (vehicle) => {
+    setSelectedVehicle(vehicle);
+    setShowDetailModal(true);
+  };
+
+  const closeDetails = () => {
+    setSelectedVehicle(null);
+    setShowDetailModal(false);
+  };
+
   const getExpiryStatus = (dateStr) => {
     if (!dateStr) return { color: 'text-gray-200', bgColor: 'bg-gray-600/80', status: 'N/A' };
 
@@ -210,6 +222,7 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
               <thead className="bg-slate-700/60">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-200 uppercase tracking-wider">#</th>
+                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-200 uppercase tracking-wider">Actions</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-200 uppercase tracking-wider">Vehicle</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-200 uppercase tracking-wider">Owner</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-200 uppercase tracking-wider">Type</th>
@@ -221,13 +234,41 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-200 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-200 uppercase tracking-wider">Created By</th>
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-200 uppercase tracking-wider">Created</th>
-                  <th className="px-6 py-4 text-center text-xs font-bold text-gray-200 uppercase tracking-wider">Actions</th>
+                  
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">
                 {vehiclesDetails.map((v, index) => (
-                  <tr key={v._id || index} className="hover:bg-slate-700/40 transition-colors duration-200">
+                  <tr key={v._id || index} onClick={() => openDetails(v)} className="hover:bg-slate-700/40 transition-colors duration-200 cursor-pointer">
                     <td className="px-6 py-4 text-gray-100 font-semibold">{index + 1}</td>
+
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (userRole === 'admin') onEdit(v);
+                            else onView(v);
+                          }}
+                          className="bg-green-600/80 hover:bg-green-600 text-white p-2 rounded-lg 
+                                     transition-all duration-200 hover:scale-110 shadow-lg"
+                          title={userRole === 'admin' ? 'Edit Vehicle' : 'View Vehicle'}
+                        >
+                          <FaEdit className="text-sm" />
+                        </button>
+
+                        {userRole === 'admin' && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); confirmDelete(v); }}
+                            className="bg-red-600/80 hover:bg-red-600 text-white p-2 rounded-lg 
+                                       transition-all duration-200 hover:scale-110 shadow-lg"
+                            title="Delete Vehicle"
+                          >
+                            <FaTrash className="text-sm" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
 
                     <td className="px-6 py-4">
                       <div className="font-bold text-white text-base">{v.vehicleNumber}</div>
@@ -319,41 +360,7 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
                       </div>
                     </td>
 
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-2">
-                        {/*                         <button 
-                          onClick={() => onView(v)} 
-                          className="bg-blue-600/80 hover:bg-blue-600 text-white p-2.5 rounded-lg transition-all duration-200 hover:scale-110 shadow-lg"
-                          title="View Details"
-                        >
-                          <FaEye className="text-sm" />
-                        </button> */}
-                        {/* ✏️ Edit button (acts as View for users) */}
-                        <button
-                          onClick={() => {
-                            if (userRole === 'admin') onEdit(v);
-                            else onView(v);
-                          }}
-                          className="bg-green-600/80 hover:bg-green-600 text-white p-2.5 rounded-lg 
-                                     transition-all duration-200 hover:scale-110 shadow-lg"
-                          title={userRole === 'admin' ? 'Edit Vehicle' : 'View Vehicle'}
-                        >
-                          <FaEdit className="text-sm" />
-                        </button>
-
-                        {/* 🗑️ Delete button visible only for Admin */}
-                        {userRole === 'admin' && (
-                          <button
-                            onClick={() => confirmDelete(v)}
-                            className="bg-red-600/80 hover:bg-red-600 text-white p-2.5 rounded-lg 
-                                       transition-all duration-200 hover:scale-110 shadow-lg"
-                            title="Delete Vehicle"
-                          >
-                            <FaTrash className="text-sm" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                    
                   </tr>
                 ))}
               </tbody>
@@ -391,6 +398,77 @@ const VehicleList = ({ vehiclesDetails, onAdd, onEdit, onView, onDelete }) => {
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vehicle Details Modal (open when row clicked) */}
+      {showDetailModal && selectedVehicle && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 max-w-2xl w-full text-gray-100">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-2xl font-bold">{selectedVehicle.vehicleNumber}</h3>
+                <p className="text-sm text-gray-300">{selectedVehicle.ownerName} • {selectedVehicle.vehicleType}</p>
+              </div>
+              <button onClick={closeDetails} className="text-gray-200 hover:text-white text-xl">✕</button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm text-gray-300">Owner</h4>
+                <p className="font-semibold">{selectedVehicle.ownerName || 'N/A'}</p>
+              </div>
+
+              <div>
+                <h4 className="text-sm text-gray-300">Vehicle Type</h4>
+                <p className="font-semibold">{selectedVehicle.vehicleType || 'N/A'}</p>
+              </div>
+
+              <div>
+                <h4 className="text-sm text-gray-300">Insurance Expiry</h4>
+                <p className="font-semibold">{formatDate(selectedVehicle.insuranceExpiry)}</p>
+              </div>
+
+              <div>
+                <h4 className="text-sm text-gray-300">Fitness Expiry</h4>
+                <p className="font-semibold">{formatDate(selectedVehicle.fitnessExpiry)}</p>
+              </div>
+
+              <div>
+                <h4 className="text-sm text-gray-300">Permit Expiry</h4>
+                <p className="font-semibold">{formatDate(selectedVehicle.permitExpiry)}</p>
+              </div>
+
+              <div>
+                <h4 className="text-sm text-gray-300">Pollution Expiry</h4>
+                <p className="font-semibold">{formatDate(selectedVehicle.pollutionExpiry)}</p>
+              </div>
+
+              <div>
+                <h4 className="text-sm text-gray-300">Tax Expiry</h4>
+                <p className="font-semibold">{formatDate(selectedVehicle.taxExpiry)}</p>
+              </div>
+
+              <div>
+                <h4 className="text-sm text-gray-300">Status</h4>
+                <p className="font-semibold">{selectedVehicle.documentStatus || 'Active'}</p>
+              </div>
+
+              <div>
+                <h4 className="text-sm text-gray-300">Created By</h4>
+                <p className="font-semibold">{selectedVehicle.createdBy?.name || selectedVehicle.createdBy?.email || selectedVehicle.createdBy || 'N/A'}</p>
+              </div>
+
+              <div>
+                <h4 className="text-sm text-gray-300">Created At</h4>
+                <p className="font-semibold">{selectedVehicle.createdAt ? new Date(selectedVehicle.createdAt).toLocaleDateString('en-IN') : 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button onClick={closeDetails} className="bg-white/10 hover:bg-white/20 text-white font-semibold py-2 px-4 rounded">Close</button>
             </div>
           </div>
         </div>
